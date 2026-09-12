@@ -230,7 +230,7 @@ function worked(m){
 }
 function theory(m){return section('1. Definition and main idea',list(intro[m]))+section('2. Algorithm / working steps','<pre>'+algorithm[m].replaceAll('<','&lt;')+'</pre>')+section('3. Worked example',worked(m))+section('4. Properties and complexity',list(properties[m])+'<p class="small muted">Symbols: b = maximum branching factor; d = depth of the shallowest goal; m = maximum search-tree depth; V = number of vertices; E = number of edges. A tree-search bound and a finite-graph bound describe different settings.</p>')+'<div class="two">'+section('5. Advantages and uses',list(advantages[m]))+section('6. Limitations',list(limitations[m]))+'</div>';}
 
-// Twelve practice topologies plus two UCS-focused weighted graphs. All edges are undirected.
+// Twelve practice topologies plus three UCS-focused weighted graphs. All edges are undirected.
 const raw=[
 ['Balanced Tree','G',{A:[450,65],B:[270,190],C:[630,190],D:[170,360],E:[350,360],F:[550,360],G:[730,360]},'AB AC BD BE CF CG'],
 ['Wide Tree','H',{A:[450,60],B:[150,205],C:[350,205],D:[550,205],E:[750,205],F:[100,400],G:[260,400],H:[640,400],I:[800,400]},'AB AC AD AE BF BG EH EI'],
@@ -245,7 +245,8 @@ const raw=[
 ['Grid','I',{A:[220,100],B:[450,100],C:[680,100],D:[220,275],E:[450,275],F:[680,275],G:[220,450],H:[450,450],I:[680,450]},'AB BC DE EF GH HI AD DG BE EH CF FI'],
 ['Disconnected Challenge','G',{A:[210,120],B:[390,120],C:[300,300],D:[180,455],E:[420,455],F:[650,180],G:[760,345]},'AB BC CA CD CE FG'],
 ['Cost update example','G',{A:[110,265],B:[355,100],C:[355,425],G:[760,265]},'AB:1 AC:4 BC:2 BG:8 CG:3'],
-['Equal-cost choices','G',{A:[100,265],B:[350,100],C:[350,425],G:[750,265]},'AB:2 AC:2 BG:3 CG:3']
+['Equal-cost choices','G',{A:[100,265],B:[350,100],C:[350,425],G:[750,265]},'AB:2 AC:2 BG:3 CG:3'],
+['UCS 5-cost edge','G',{A:[100,265],B:[350,100],C:[350,425],G:[750,265]},'AB:2 AC:2 BG:3 CG:5']
 ];
 const graphs=raw.map(([name,target,nodes,es])=>{
   const edges=es.split(' ').map((s,i)=>[s[0],s[1],s.includes(':')?Number(s.split(':')[1]):1+(i*3+2)%7]);
