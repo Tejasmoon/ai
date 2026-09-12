@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Uninformed Search | AI Unit 2</title>
+<style>
+:root{
+  --bg:#f4f7fb;--ink:#182b43;--muted:#52627a;--blue:#215ac7;--line:#dce3ed;
+  --purple:#7057d9;--green:#238354;--amber:#b67e00;--red:#c63e49
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+button,select,input{font:inherit;color:inherit;min-height:42px;border:1px solid #b8c5d9;border-radius:8px;background:#fff;padding:8px 12px;max-width:100%}
+button{cursor:pointer;font-weight:650}
+button:hover{background:#edf3ff}
+button:disabled{opacity:.5;cursor:default}
+button.primary,button.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #e9a820;outline-offset:3px}
+a{color:var(--blue)}
+[hidden]{display:none!important}
+.srOnly{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.container{max-width:1240px;margin:auto;padding:24px}
+header{border-bottom:1px solid var(--line);background:#fff}
+header .container{padding-top:16px;padding-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+h1{font-size:clamp(24px,3vw,36px);letter-spacing:-.04em;line-height:1.15;margin:0}
+h2{font-size:clamp(23px,2.5vw,32px);line-height:1.3;margin:0 0 14px}
+h3{font-size:19px;margin:0 0 10px}
+p{margin:0 0 14px}
+.eyebrow{font-size:13px;letter-spacing:.08em;color:var(--blue);font-weight:750;text-transform:uppercase}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.intro{max-width:850px;margin:20px 0 28px}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.card,.section{background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px;margin-bottom:20px}
+.card{border-top:4px solid var(--blue);display:flex;flex-direction:column;align-items:flex-start}
+.card p{flex:1}.card:nth-child(2){border-top-color:#7159aa}.card:nth-child(3){border-top-color:#188071}
+.num{font-size:14px;color:var(--muted);margin-bottom:20px}
+.nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:24px}.two>.section{margin:0}
+.callout{border-left:4px solid var(--blue);background:#edf3ff;padding:16px 20px;margin:16px 0}
+li{margin-bottom:8px}ul,ol{padding-left:23px;margin:8px 0 16px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f2f5fa;border:1px solid var(--line);padding:18px;border-radius:8px;line-height:1.6;font:14px/1.65 ui-monospace,Consolas,monospace}
+.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:15px}th,td{padding:11px 12px;text-align:left;border:1px solid var(--line);vertical-align:top}th{background:#eff4fc}
+.lessonTitle{margin-bottom:18px}
+
+/* Interactive search surface */
+.sim{background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:24px;height:calc(100dvh - 24px);min-height:520px;display:flex;flex-direction:column;overflow:hidden;gap:8px;padding:12px}
+.toolbar{display:flex;align-items:center;gap:12px;flex:none;margin:0}.toolbar h2{margin:0;font-size:20px}
+.controls{display:flex;gap:8px;align-items:end;flex-wrap:wrap;flex:none;margin:0}
+label{display:flex;flex-direction:column;font-size:14px;font-weight:650;gap:4px;min-width:0}
+#graphSelect{width:205px}#possibilitySelect{width:330px}#delay{width:90px}
+.count{font-size:13px;color:var(--muted);margin:0;flex:none;line-height:1.35}
+.viz{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:12px;align-items:stretch;flex:1;min-height:0}
+.graphBox{display:flex;flex-direction:column;min-width:0;min-height:0}
+svg{display:block;width:100%;height:0;min-height:0;flex:1;background:#fbfcff;border:1px solid var(--line);border-radius:12px}
+.edge{stroke:#bbc7d9;stroke-width:4;transition:stroke .22s,stroke-width .22s}.edge.tree{stroke:#7596d0}.edge.path{stroke:#18834d;stroke-width:8}.edge.relaxing{stroke:#11976d;stroke-width:7;stroke-dasharray:10 5;animation:edgeFlow .7s linear 1}
+.node circle{fill:#fff;stroke:#8c9cb3;stroke-width:4;transition:fill .22s,stroke .22s,stroke-width .22s}.node text{font-size:27px;font-weight:750;fill:#172b43;pointer-events:none}.node{cursor:pointer}.node.discovered circle{fill:#eee8ff;stroke:#7057d9}.node.processed circle{fill:#def2e5;stroke:#278551}.node.current circle{fill:#ffedb0;stroke:#b67e00;stroke-width:6}.node.target circle{stroke:#c63e49;stroke-dasharray:7 4}.node.improved circle{stroke:#11976d}.node:focus-visible{outline:none}.node:focus-visible circle{stroke:#215ac7;stroke-width:7}
+.weightWrap rect{fill:#fbfcff;stroke:#d5ddea;stroke-width:1.5}.weight{font-size:22px;font-weight:800;fill:#344c70;dominant-baseline:middle;text-anchor:middle}.node .costLabel{font-size:21px;font-weight:750;fill:#1b573f;paint-order:stroke;stroke:#fbfcff;stroke-width:5px;stroke-linejoin:round;transform-box:fill-box;transform-origin:center;will-change:opacity;opacity:1;transition:opacity .24s cubic-bezier(.22,.61,.36,1)}.node .costLabel.costFormula{font-size:16px;fill:#215ac7;font-weight:850;letter-spacing:-.01em}.node .costLabel.costResult{fill:#17603b;font-weight:850}
+.legend{font-size:13px;display:flex;gap:12px;flex-wrap:wrap;margin:6px 0;line-height:1.35}.legend span:before{content:'';display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;background:var(--c);border:1px solid #778}
+#graphNote{font-size:13px;line-height:1.35;margin:0}
+.viz aside{min-width:0;min-height:0;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.state{padding:10px;border:1px solid var(--line);border-radius:10px;overflow-wrap:anywhere;min-width:0}.state h3{font-size:16px;margin:0}.frontierState{flex:0 1 auto;overflow:auto;overscroll-behavior:contain}.orderState{flex:none}.result{background:#edf8f0;border-color:#b5d5be;font-size:14px;line-height:1.4;flex:none}
+.stateHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}.stepCounter{font-size:12px;color:var(--muted);white-space:nowrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap;min-height:36px;align-items:center;position:relative;overflow:visible}
+.chip{background:#eee8ff;border:2px solid #7057d9;border-radius:8px;min-width:36px;padding:4px 9px;text-align:center;font-weight:750;line-height:1.4;will-change:transform,opacity;transition:background-color .30s ease,border-color .30s ease,color .30s ease,box-shadow .30s ease}
+.visited .chip{background:#def2e5;border-color:#acd3b9}.chip.minimum{border-color:#258467;background:#e3f3ee}.chip.nextOut{border-color:#bb8100;background:#fff0bc}.chipGhost{position:fixed!important;margin:0!important;z-index:9999;pointer-events:none;will-change:transform,opacity;transform-origin:center center;transition:none!important}
+.emptyLabel{color:var(--muted);font-size:13px}
+#direction{line-height:1.4;margin-top:4px}
+
+/* UCS calculations live inside the priority-queue card, not in a separate status box. */
+.calcPanel{border-top:1px solid var(--line);margin-top:9px;padding-top:8px}.calcTitle{font-size:13px;font-weight:800;margin-bottom:5px}.calcContext{font-size:12px;color:var(--muted);margin-bottom:4px}.calcRow{padding:6px 0;border-top:1px solid #edf0f4}.calcRow:first-of-type{border-top:0}.calcFormula{font:600 12.5px/1.35 ui-monospace,Consolas,monospace;overflow-wrap:anywhere}.calcDecision{font-size:12px;color:var(--muted);margin-top:2px}.calcDecision.good{color:#17603b;font-weight:700}.calcDecision.skip{color:#6b7280}
+.flowDot{pointer-events:none}
+@keyframes edgeFlow{from{stroke-dashoffset:30}to{stroke-dashoffset:0}}
+
+/* Data-structure revision */
+.dsTray{padding:18px;border:1px solid var(--line);border-radius:10px;background:#f8faff;margin-bottom:12px}.dsTray .chips{min-height:74px;padding:12px 0;gap:10px}.dsTray #dsDirection{font-weight:650}#dsItems .chip{padding:10px 14px}#dsValue{width:140px}#dsPriority{width:100px}#revision .status{margin-bottom:12px}#dsProgress{align-self:center}.status{background:#f8fafc;border-color:#dce3ed}
+
+button,select,input,a{transition:background-color .18s,border-color .18s,box-shadow .18s,transform .18s}button:active{transform:scale(.97)}
+#home,#lesson,#theory,#revision{animation:pageEnter .22s ease}@keyframes pageEnter{from{opacity:.45;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+@media(max-height:650px) and (min-width:761px){
+  .sim{gap:5px;padding:8px}.sim .state{padding:7px}.sim button,.sim select,.sim input{min-height:34px;padding:4px 8px;font-size:14px}.sim .controls label{font-size:12px;gap:1px}.sim .count{font-size:12px}.sim .chip{padding:3px 6px}.sim #graphNote{display:none}.viz aside{gap:5px}.calcRow{padding:4px 0}
+}
+@media(max-height:480px) and (min-width:761px){
+  .sim .state{padding:5px 7px;font-size:12px;line-height:1.25}.sim .state h3,.sim #direction{font-size:12px;line-height:1.25}.sim .chip{font-size:12px;min-width:24px;padding:2px 5px}.sim .chips{min-height:24px;gap:4px}.sim .legend,.sim #graphNote,.sim .count{display:none}.sim .toolbar h2{font-size:16px}.viz aside{gap:4px}.calcFormula,.calcDecision,.calcContext{font-size:10.5px}
+}
+@media(max-width:760px){
+  .container{padding:16px}.cards,.two{grid-template-columns:1fr}.card{margin-bottom:0}.cards{margin-bottom:20px}.section,.card{padding:20px}header .container{align-items:flex-start}
+  .sim{height:calc(100dvh - 12px);min-height:500px;gap:6px;padding:8px}.toolbar h2{font-size:16px}
+  .configControls{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr);gap:5px}.configControls label{font-size:12px;line-height:1.2;gap:2px}.configControls label:nth-child(3){grid-column:1}.configControls label:nth-child(4){grid-column:2}.configControls select,.configControls input{width:100%!important;min-width:0;min-height:32px;font-size:13px;padding:4px 6px}
+  .playControls{display:flex;gap:5px}.playControls button{min-height:32px;font-size:14px;padding:4px 10px}.count{font-size:12px;line-height:1.25}
+  .viz{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto auto auto;gap:5px}.graphBox{grid-row:1}.viz aside{display:contents}.frontierState{grid-row:2;max-height:23dvh}.orderState{grid-row:3}.result{grid-row:4}
+  .state{padding:6px 8px;line-height:1.3}.state h3{font-size:14px}.chips{min-height:24px;gap:4px}.chip{min-width:24px;padding:2px 6px;font-size:13px}#direction{font-size:12px;line-height:1.25;margin-top:3px}.orderState{display:flex;align-items:center;gap:8px}.orderState .stateHead{margin:0;flex:0 0 96px}.orderState .stateHead h3{font-size:12px}.orderState .stepCounter{display:none}.orderState #visited{flex:1}.legend,#graphNote{display:none}.result{font-size:13px}
+  .calcPanel{margin-top:6px;padding-top:5px}.calcRow{padding:4px 0}.calcTitle{font-size:12px}.calcFormula{font-size:11px}.calcDecision,.calcContext{font-size:10.5px}
+  .dsTray{padding:12px}.dsTray .chips{min-height:56px;padding:8px 0}
+}
+@media(max-width:760px) and (max-height:650px){.sim .count{display:none}.sim{gap:4px}.sim .state{padding:4px 6px}.toolbar h2{font-size:14px}.frontierState{max-height:25dvh}}
+@media(max-width:760px) and (orientation:landscape){
+  .sim .viz{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr)}.graphBox{grid-column:1;grid-row:1}.viz aside{display:flex;grid-column:2;grid-row:1;gap:4px;overflow:hidden}.frontierState{max-height:none;flex:0 1 auto}.state{font-size:12px;padding:4px 6px}.configControls{grid-template-columns:minmax(0,1.1fr) 60px minmax(0,1.5fr) 65px}.configControls label:nth-child(3),.configControls label:nth-child(4){grid-column:auto}.count{display:none}.orderState{display:block}.orderState .stateHead{margin-bottom:2px}.orderState .stateHead h3{font-size:11px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+@media print{header button,.nav,.controls,.sim,.cards button{display:none!important}body{background:#fff;color:#000}.container{max-width:none;padding:0}.section{border:0;padding:8px 0;break-inside:avoid}.two{display:block}h2,h3{break-after:avoid}a{color:inherit}table{font-size:11px}.cards{display:block}}
+</style>
+</head>
+<body>
+<header><div class="container"><div><div class="eyebrow">Artificial Intelligence · Unit 2</div><h1>Uninformed Search</h1></div><button id="homeBtn" hidden>← Home</button></div></header>
+<main class="container">
+<section id="home">
+  <div class="intro"><h2>Three ways to search for a goal</h2><p>Uninformed search uses only the information given in a problem. It does not use a heuristic, or an estimate of the remaining distance to the goal. It is also called <strong>blind search</strong>.</p><p class="muted">Choose an algorithm to study its theory and follow a working example.</p></div>
+  <div class="cards">
+    <article class="card"><div class="num">01 · LEVEL BY LEVEL</div><h2>BFS</h2><p>Breadth-First Search explores nearby nodes first. It uses a queue.</p><button class="primary" data-mode="BFS">Study BFS →</button></article>
+    <article class="card"><div class="num">02 · ONE BRANCH AT A TIME</div><h2>DFS</h2><p>Depth-First Search goes deep along one branch, then backtracks. It uses a stack.</p><button class="primary" data-mode="DFS">Study DFS →</button></article>
+    <article class="card"><div class="num">03 · LOWEST TOTAL COST FIRST</div><h2>Uniform-Cost Search</h2><p>UCS selects the node with the lowest path cost from the start. It uses a priority queue.</p><button class="primary" data-mode="UCS">Study Uniform-Cost Search →</button></article>
+  </div>
+
+  <section class="section" id="revision">
+    <h2>Quick revision: the data structures</h2><p>Try the operations before studying the search algorithms.</p>
+    <div class="nav" aria-label="Data structure"><button data-ds="stack" class="active">Stack</button><button data-ds="queue">Queue</button><button data-ds="priority">Priority queue</button></div>
+    <h3 id="dsTitle"></h3><p id="dsIdea"></p>
+    <div class="controls"><label>Item<input id="dsValue" maxlength="12" value="A" autocomplete="off"></label><label id="priorityLabel" hidden>Priority (0–99)<input id="dsPriority" type="number" value="4" min="0" max="99" step="1"></label><button id="dsAdd" class="primary">Push</button><button id="dsRemove">Pop</button><button id="dsPeek">Peek</button><button id="dsReset">Reset</button></div>
+    <div class="dsTray"><div id="dsCapacity" class="small" role="status"></div><div id="dsDirection" class="small muted"></div><div class="chips" id="dsItems"></div></div>
+    <div class="state status" id="dsStatus" role="status" aria-live="polite"></div>
+    <div class="controls"><button id="dsExample">Next example step ▶</button><button id="dsRestart">Restart example</button><span id="dsProgress" class="small muted"></span></div>
+    <p id="dsExampleHint" class="small"></p>
+    <p class="small"><strong>Underflow:</strong> trying to remove an item from an empty structure.<br><strong>Overflow:</strong> trying to insert an item into a full, fixed-capacity structure. The new item is rejected; existing items stay unchanged.<br>This practice tray has <strong>6 slots</strong>. Growable implementations do not have this fixed six-item limit, and neither do the graph-search demos.</p>
+  </section>
+
+  <section class="section"><h2>Basic terms to remember</h2><div class="two"><ul><li><strong>State:</strong> a situation in the problem, represented by a node.</li><li><strong>Initial state:</strong> the state from which the search begins.</li><li><strong>Action:</strong> a move from one state to another, represented by an edge.</li><li><strong>Goal test:</strong> a check to decide whether the required state has been reached.</li></ul><ul><li><strong>Frontier:</strong> discovered nodes waiting to be selected for expansion.</li><li><strong>Expansion:</strong> generating or examining the neighbours of a node.</li><li><strong>Path cost g(n):</strong> the sum of edge costs from the start to node n.</li><li><strong>Solution path:</strong> the connected route from the start to the goal. It is not the same as the search order.</li></ul></div><p><strong>Complete</strong> means the method is guaranteed to find a solution if one exists, under its stated conditions. <strong>Optimal</strong> means it is guaranteed to find a solution with the lowest cost.</p></section>
+  <section class="section"><h2>BFS, DFS and UCS at a glance</h2><div class="tablewrap"><table><thead><tr><th>Point</th><th>BFS</th><th>DFS</th><th>UCS</th></tr></thead><tbody><tr><th>Selection rule</th><td>Smallest depth first</td><td>Deepest active branch first</td><td>Smallest g(n) first</td></tr><tr><th>Data structure</th><td>FIFO queue</td><td>LIFO stack / recursion</td><td>Priority queue</td></tr><tr><th>Uses edge costs?</th><td>No</td><td>No</td><td>Yes</td></tr><tr><th>Complete?</th><td>Yes, with finite branching and a solution at finite depth</td><td>Not in general on infinite spaces; yes on a finite graph with a visited set</td><td>Yes, with finite branching and every step cost ≥ ε &gt; 0</td></tr><tr><th>Optimal?</th><td>Yes when every step has the same positive cost</td><td>No, in general</td><td>Yes for non-negative costs on a finite graph</td></tr><tr><th>Memory cue</th><td>Nearby first</td><td>Deep first</td><td>Cheapest so far first</td></tr></tbody></table></div></section>
+  
+</section>
+
+<section id="lesson" hidden>
+  <nav class="nav" aria-label="Search algorithm"><button data-mode="BFS">BFS</button><button data-mode="DFS">DFS</button><button data-mode="UCS">Uniform-Cost Search</button></nav>
+  <div class="lessonTitle"><h2 id="lessonTitle"></h2><p id="memory" class="callout"></p><div class="nav"><button id="theoryBtn" class="active">Theory &amp; worked example</button><button id="workingBtn">Interactive working example</button></div></div>
+  <div id="theory"></div>
+
+  <section class="sim" id="sim" hidden>
+    <div class="toolbar"><h2 id="simTitle"></h2></div>
+    <div class="controls configControls"><label>Graph<select id="graphSelect"></select></label><label>Target<select id="targetSelect"></select></label><label>Traversal possibility<select id="possibilitySelect"></select></label><label>Delay (seconds)<input id="delay" type="number" min="0.5" max="10" step="0.5" value="2"></label></div>
+    <div class="controls playControls"><button id="nextBtn" class="primary">Next step ▶</button><button id="autoBtn">Auto play</button><button id="resetBtn">Reset</button></div>
+    <p class="count" id="count"></p>
+    <div class="viz">
+      <div class="graphBox">
+        <svg id="graph" viewBox="0 0 900 550" role="img" aria-label="Search graph. Use the Target list to select a goal."></svg>
+        <div class="legend"><span style="--c:#eee8ff">Discovered</span><span style="--c:#def2e5">Selected / visited</span><span style="--c:#ffedb0">Current</span><span style="--c:#fff">Dashed red: target</span></div>
+        <p class="small muted" id="graphNote"></p>
+      </div>
+      <aside>
+        <div class="state frontierState">
+          <div class="stateHead"><h3 id="structureTitle"></h3><span class="stepCounter" id="stepCounter">Ready</span></div>
+          <div id="chips" class="chips"></div>
+          <div id="direction" class="small muted"></div>
+          <div id="calcPanel" class="calcPanel" hidden><div class="calcTitle">Dynamic cost calculation</div><div id="calcContext" class="calcContext"></div><div id="calcRows"></div></div>
+        </div>
+        <div class="state orderState"><div class="stateHead"><h3 id="orderTitle">Selection order</h3></div><div class="chips visited" id="visited"></div></div>
+        <div class="state result" id="result" hidden></div>
+      </aside>
+    </div>
+    <p class="small muted" id="conventions"></p>
+    <div id="liveStatus" class="srOnly" role="status" aria-live="polite"></div>
+  </section>
+</section>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const title={BFS:'Breadth-First Search (BFS)',DFS:'Depth-First Search (DFS)',UCS:'Uniform-Cost Search (UCS)'};
+const memory={
+  BFS:'Remember: level by level → FIFO queue → fewest edges when all steps have equal cost.',
+  DFS:'Remember: go deep → LIFO stack → backtrack when no unvisited neighbour remains.',
+  UCS:'Remember: calculate total cost g(n) → choose the smallest g(n) → test the goal after removal.'
+};
+const list=a=>'<ul>'+a.map(s=>'<li>'+s+'</li>').join('')+'</ul>';
+const section=(h,b)=>'<section class="section"><h2>'+h+'</h2>'+b+'</section>';
+const table=(heads,rows)=>'<div class="tablewrap"><table><thead><tr>'+heads.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(x=>'<td>'+x+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+
+const intro={
+BFS:['BFS is an uninformed search method that explores nodes <strong>level by level</strong>. It selects the shallowest waiting node first.','The start node is at depth 0. Its neighbours are at depth 1, their new neighbours are at depth 2, and so on.','BFS uses a <strong>queue</strong>. A queue follows FIFO: First In, First Out. The first node inserted is the first node removed.','Nodes are inserted at the <strong>rear</strong> and removed from the <strong>front</strong>. Think of people waiting in a line.','In graph search, mark a node as discovered when it is inserted. This prevents repeated insertion and stops cycles from causing repeated visits.','BFS finds a path with the <strong>fewest edges</strong>. It finds the least-cost path only when all edges have the same positive cost.','The order of neighbours can change the order within a level. It cannot make a deeper node appear before all earlier queued shallower nodes.'],
+DFS:['DFS is an uninformed search method that follows <strong>one branch as deeply as possible</strong> before trying another branch.','DFS uses a <strong>stack</strong>, either explicitly or through recursive function calls. A stack follows LIFO: Last In, First Out.','The most recently pushed node is on the top of the stack. Push and pop both take place at the top.','When an unvisited neighbour exists, DFS moves to it and pushes it onto the active call stack.','When no unvisited neighbour remains, DFS pops the current node and returns to the previous node. This is called <strong>backtracking</strong>.','Keep a visited set in graph search. A node remains visited even after it is popped from the stack. This prevents cycles and repeated exploration.','DFS does not compare path lengths or path costs. The first solution it finds may be long or expensive.','Different neighbour choices give different valid DFS orders. A selected branch must be explored or exhausted before returning to another branch.'],
+UCS:['UCS is an uninformed search method that always selects the waiting node with the <strong>lowest total path cost from the start</strong>.','It uses <strong>g(n)</strong>, the actual cost of the path found from the start to node n. The start has g(start) = 0.','It uses a <strong>priority queue</strong>. The smallest cost has the highest removal priority; insertion order alone does not decide which node is selected.','For a neighbour v of current node u, calculate <strong>new cost = g(u) + cost(u,v)</strong>. This adds the next edge cost to the cost already spent.','If v is new, insert it. If the new cost is lower than its stored cost, update its cost and parent, then reorder the priority queue. This is called <strong>relaxation</strong>.','Test the goal when it is <strong>removed as a minimum-cost node</strong>, not when it is first inserted. A cheaper route to a waiting goal may still be found.','UCS considers actual cost already spent. It does not estimate the cost still needed, so it is uninformed even though it uses edge costs.','Use non-negative edge costs for this graph-search algorithm. With negative edges, closing a node permanently can give an incorrect result.','Equal-cost nodes may be selected in different orders. With equal positive edge costs, UCS explores depth levels like BFS.']
+};
+const algorithm={
+BFS:`1. Create an empty FIFO queue and a discovered set.
+2. Insert the start node; mark it discovered.
+3. While the queue is not empty:
+   a. Remove the front node u.
+   b. If u is the goal, return its parent-chain path.
+   c. For each neighbour v of u:
+      If v is not discovered:
+         Mark v discovered and set parent[v] = u.
+         Insert v at the rear of the queue.
+4. If the queue becomes empty, report failure.`,
+DFS:`1. Mark the start visited and push it onto a stack.
+2. If the start is the goal, return its path.
+3. While the stack is not empty:
+   a. Let u be the top node.
+   b. If u has an unvisited neighbour v:
+      Mark v visited and set parent[v] = u.
+      Push v onto the stack.
+      If v is the goal, return its parent-chain path.
+   c. Otherwise, pop u to backtrack.
+4. If the stack becomes empty, report failure.`,
+UCS:`1. Set g(start) = 0; all other costs = infinity.
+2. Insert the start in a minimum-priority queue.
+3. While the priority queue is not empty:
+   a. Remove a node u with minimum g(u).
+   b. If u is the goal, return its path and g(u).
+   c. Mark u settled (its minimum cost is final).
+   d. For each neighbour v that is not settled:
+      newCost = g(u) + cost(u,v)
+      If newCost < g(v):
+         Set g(v) = newCost and parent[v] = u.
+         Insert v, or update its priority if present.
+4. If the queue becomes empty, report failure.`
+};
+const properties={
+BFS:['<strong>Completeness:</strong> complete with finite branching when the goal exists at a finite depth. On a finite graph, the visited-set version also terminates when the goal is unreachable.','<strong>Optimality:</strong> gives the fewest edges; therefore it is cost-optimal when all steps have the same positive cost. Unequal edge costs remove this guarantee.','<strong>AI search-tree time and space:</strong> Standard textbook answer: O(b<sup>d</sup>) time and O(b<sup>d</sup>) space. In this visualizer, the goal is tested when a node is removed from the queue, so a conservative implementation-specific time bound can also be written as O(b<sup>d+1</sup>).','<strong>Finite adjacency-list graph:</strong> O(V + E) time and O(V) extra space, excluding the input graph. These bounds describe one BFS run, not generation of every possible order.'],
+DFS:['<strong>Completeness:</strong> ordinary DFS is not complete on an infinite search space. It may keep following an infinite branch even when a solution exists elsewhere.','<strong>Finite graphs:</strong> with a visited set, DFS terminates and finds any goal reachable from the start. This is the version shown here.','<strong>Optimality:</strong> not guaranteed. DFS can return a longer route even when a shorter route exists.','<strong>AI search-tree time:</strong> O(b<sup>m</sup>). <strong>Space:</strong> O(bm) for a conventional stack-based tree search retaining siblings. A recursive implementation generating one successor at a time can use O(m) active-path space, apart from other bookkeeping.','<strong>Finite adjacency-list graph:</strong> O(V + E) time and O(V) extra space, including the visited set and stack. The memory advantage over BFS is strongest in tree search; a full graph visited set can still be large.'],
+UCS:['<strong>Completeness:</strong> complete on a search tree with finite branching if every step costs at least some fixed ε &gt; 0. Otherwise, infinitely many zero-cost or ever-cheaper steps may delay a goal forever.','<strong>Finite graphs:</strong> the settled-set implementation terminates with non-negative costs, including zero-cost edges. All supplied examples use positive costs.','<strong>Optimality:</strong> gives a minimum-cost path with non-negative edge costs. When the cheapest waiting goal is removed, no cheaper route can remain hidden behind a more expensive waiting node.','<strong>AI search-tree time and space:</strong> O(b<sup>1 + ⌊C*/ε⌋</sup>), where C* is the optimal solution cost and ε is the smallest allowed positive step cost.','<strong>Finite adjacency-list graph:</strong> O((V + E) log V) time with a binary heap and decrease-key; O(V) extra storage. This small teaching visualizer uses a sorted array instead of a heap, so the heap time bound is not a claim about this JavaScript implementation.']
+};
+const advantages={BFS:['Easy to understand and implement using a queue.','Finds a shortest route in an unweighted graph.','Useful for a goal expected near the start, such as the fewest moves in a simple puzzle.'],DFS:['Can use much less frontier memory than BFS in deep tree searches.','Naturally supports backtracking and exploring maze branches.','Useful for reachability and as a basis for graph algorithms.'],UCS:['Finds the cheapest route even when edge costs differ.','Can improve an earlier expensive route by updating a waiting node.','Useful for minimum travel cost or distance when costs are non-negative.']};
+const limitations={BFS:['The queue can become very large in a wide search tree.','It can examine many nodes before finding a deep goal.','It ignores unequal costs and can choose an expensive route with fewer edges.'],DFS:['May spend a long time on an unhelpful deep branch.','Does not guarantee the shortest or cheapest path.','Without cycle handling, a graph with a cycle can cause repeated exploration.'],UCS:['The priority queue and stored costs may require large memory.','Many cheap paths may be explored before the goal is selected.','Priority updates add overhead; the algorithm does not support negative edges as shown.']};
+
+function worked(m){
+  if(m==='UCS')return '<p>Use the weighted graph “Cost update example”. Start A, goal G. Edges: A–B = 1, A–C = 4, B–C = 2, B–G = 8, C–G = 3. An entry C:3 means the best known total cost to C is 3.</p>'+table(['Action','Priority queue after action','Reason'],[['Insert A','A:0','No cost has been spent.'],['Select A; expand it','B:1, C:4','1 = 0+1; 4 = 0+4.'],['Select B; expand it','C:3, G:9','Improve C: 1+2=3 &lt; 4. Discover G: 1+8=9.'],['Select C; expand it','G:6','Improve G: 3+3=6 &lt; 9.'],['Select G','Empty','G is now the cheapest waiting node. Stop.']])+'<div class="callout"><strong>Solution:</strong> A → B → C → G. Cost = 1 + 2 + 3 = <strong>6</strong>.<br>The first discovered goal had cost 9. Stopping on insertion would have been wrong. BFS on this graph can return A → B → G: fewer edges, but cost 9.</div>';
+  if(m==='BFS')return '<p>Use “Balanced Tree”. Start A, goal G. A connects to B and C; B connects to D and E; C connects to F and G. Choose alphabetical neighbours. Queue front is shown on the left.</p>'+table(['Action','Queue after expansion','Expansion order'],[['Insert A','A','—'],['Remove A; add B, C','B, C','A'],['Remove B; add D, E','C, D, E','A, B'],['Remove C; add F, G','D, E, F, G','A, B, C'],['Remove D; no new neighbour','E, F, G','A, B, C, D'],['Remove E; no new neighbour','F, G','A, B, C, D, E'],['Remove F; no new neighbour','G','A, B, C, D, E, F'],['Remove G; goal found','Empty','A, B, C, D, E, F, G']])+'<div class="callout"><strong>Solution path:</strong> A → C → G, with 2 edges.<br><strong>Levels:</strong> A | B, C | D, E, F, G. The expansion order contains explored nodes outside the solution path.</div>';
+  return '<p>Use “Balanced Tree”. Start A, goal G. Choose alphabetical unvisited neighbours. Stack top is shown on the right. Popping does not remove a node from the visited set.</p>'+table(['Action','Active stack','Why?'],[['Push A, then B, then D','A, B, D','Follow the first branch deeply.'],['Pop D','A, B','D has no unvisited neighbour.'],['Push E','A, B, E','Try the next unvisited neighbour of B.'],['Pop E; then pop B','A','The whole B branch is finished.'],['Push C, then F','A, C, F','Explore the next branch from A.'],['Pop F','A, C','F has no unvisited neighbour.'],['Push G; goal found','A, C, G','Stop at the target.']])+'<div class="callout"><strong>DFS visit order:</strong> A → B → D → E → C → F → G.<br><strong>Solution path:</strong> A → C → G. These are different: D, E and F were visited but are not on the final path.</div>';
+}
+function theory(m){return section('1. Definition and main idea',list(intro[m]))+section('2. Algorithm / working steps','<pre>'+algorithm[m].replaceAll('<','&lt;')+'</pre>')+section('3. Worked example',worked(m))+section('4. Properties and complexity',list(properties[m])+'<p class="small muted">Symbols: b = maximum branching factor; d = depth of the shallowest goal; m = maximum search-tree depth; V = number of vertices; E = number of edges. A tree-search bound and a finite-graph bound describe different settings.</p>')+'<div class="two">'+section('5. Advantages and uses',list(advantages[m]))+section('6. Limitations',list(limitations[m]))+'</div>';}
+
+// Twelve practice topologies plus two UCS-focused weighted graphs. All edges are undirected.
+const raw=[
+['Balanced Tree','G',{A:[450,65],B:[270,190],C:[630,190],D:[170,360],E:[350,360],F:[550,360],G:[730,360]},'AB AC BD BE CF CG'],
+['Wide Tree','H',{A:[450,60],B:[150,205],C:[350,205],D:[550,205],E:[750,205],F:[100,400],G:[260,400],H:[640,400],I:[800,400]},'AB AC AD AE BF BG EH EI'],
+['Deep Tree','H',{A:[430,50],B:[300,145],C:[250,240],D:[220,335],E:[200,460],F:[600,165],G:[650,285],H:[690,420]},'AB BC CD DE AF FG GH'],
+['Diamond','F',{A:[450,60],B:[280,175],C:[620,175],D:[450,300],E:[300,445],F:[600,445]},'AB AC BD CD DE DF'],
+['Cycle','E',{A:[450,60],B:[650,155],C:[690,350],D:[520,475],E:[300,430],F:[210,235]},'AB BC CD DE EF FA'],
+['Ladder','F',{A:[210,135],B:[450,135],C:[690,135],D:[210,405],E:[450,405],F:[690,405]},'AB BC DE EF AD BE CF'],
+['Cross Links','H',{A:[450,60],B:[230,175],C:[450,185],D:[680,175],E:[170,365],F:[370,390],G:[560,390],H:[760,365]},'AB AC AD BE BF CF CG DG DH FG'],
+['Uneven Tree','I',{A:[450,55],B:[250,165],C:[650,165],D:[150,295],E:[320,295],F:[700,300],G:[95,455],H:[220,455],I:[360,455]},'AB AC BD BE CF DG DH EI'],
+['Dense Network','G',{A:[450,60],B:[245,180],C:[450,195],D:[655,180],E:[270,400],F:[450,480],G:[630,400]},'AB AC AD BC CD BE CE CF CG DG EF FG'],
+['Two Routes','H',{A:[450,55],B:[230,145],C:[670,145],D:[170,250],E:[145,365],F:[160,485],G:[630,275],H:[470,430]},'AB BD DE EF FH AC CG GH'],
+['Grid','I',{A:[220,100],B:[450,100],C:[680,100],D:[220,275],E:[450,275],F:[680,275],G:[220,450],H:[450,450],I:[680,450]},'AB BC DE EF GH HI AD DG BE EH CF FI'],
+['Disconnected Challenge','G',{A:[210,120],B:[390,120],C:[300,300],D:[180,455],E:[420,455],F:[650,180],G:[760,345]},'AB BC CA CD CE FG'],
+['Cost update example','G',{A:[110,265],B:[355,100],C:[355,425],G:[760,265]},'AB:1 AC:4 BC:2 BG:8 CG:3'],
+['Equal-cost choices','G',{A:[100,265],B:[350,100],C:[350,425],G:[750,265]},'AB:2 AC:2 BG:3 CG:3']
+];
+const graphs=raw.map(([name,target,nodes,es])=>{
+  const edges=es.split(' ').map((s,i)=>[s[0],s[1],s.includes(':')?Number(s.split(':')[1]):1+(i*3+2)%7]);
+  const adj=Object.fromEntries(Object.keys(nodes).map(n=>[n,[]]));
+  for(const [a,b] of edges){adj[a].push(b);adj[b].push(a)}
+  Object.values(adj).forEach(a=>a.sort());
+  return {name,target,nodes,edges,adj};
+});
+const key=(a,b)=>[a,b].sort().join('-');
+function* perms(a){if(!a.length){yield [];return}for(let i=0;i<a.length;i++)for(const t of perms(a.slice(0,i).concat(a.slice(i+1))))yield [a[i],...t]}
+function pathFrom(parent,target){const path=[target];const guard=new Set([target]);while(parent[path[0]]){const p=parent[path[0]];if(guard.has(p))break;guard.add(p);path.unshift(p)}return path}
+
+/*
+  Playback rules:
+  BFS: one step = remove one node and enqueue ALL newly discovered neighbours together.
+  DFS: one step = one push or one pop, matching an active call stack.
+  UCS: one step = remove one minimum-cost node and relax ALL eligible neighbours together.
+*/
+function run(g,m,target,decisions=[],enumerate=false){
+  let f=['A'],seen=new Set(['A']),order=m==='DFS'?['A']:[],closed=new Set(),dist={A:0},parent={},current=m==='DFS'?'A':null,steps=[],choiceIndex=0;
+  const snapshot=(message,done=false,found=false,detail={})=>{if(!enumerate)steps.push({f:[...f],seen:[...seen],order:[...order],dist:{...dist},parent:{...parent},current,message,done,found,...detail})};
+  const choose=options=>{if(options.length===1)return options[0];if(choiceIndex>=decisions.length)throw {branch:options.length};const n=decisions[choiceIndex++];if(!Number.isInteger(n)||n<0||n>=options.length)throw Error('Invalid traversal choice');return options[n]};
+  const weight=(a,b)=>m==='UCS'?g.edges.find(e=>key(e[0],e[1])===key(a,b))[2]:1;
+  const sortFrontier=()=>f.sort((a,b)=>dist[a]-dist[b]||a.localeCompare(b));
+  const result=found=>({steps,order:[...order],found,parent:{...parent},dist:{...dist}});
+
+  snapshot(m==='DFS'?'PUSH A':m==='UCS'?'START · A:0':'START · A',m==='DFS'&&target==='A',m==='DFS'&&target==='A',{action:'start',added:['A'],updates:[],before:[]});
+  if(m==='DFS'&&target==='A')return result(true);
+
+  while(f.length){
+    const before=[...f];
+    if(m==='DFS'){
+      current=f.at(-1);
+      const fresh=g.adj[current].filter(n=>!seen.has(n));
+      if(fresh.length){
+        const v=choose(fresh);parent[v]=current;dist[v]=dist[current]+1;seen.add(v);f.push(v);order.push(v);current=v;
+        snapshot('PUSH '+v+(v===target?' · GOAL':''),v===target,v===target,{action:'push',added:[v],updates:[],before});
+        if(v===target)return result(true);
+      }else{
+        const popped=f.pop();current=f.at(-1)||null;
+        snapshot('POP '+popped+(!f.length?' · UNREACHABLE':''),!f.length,false,{action:'pop',removed:popped,added:[],updates:[],before});
+      }
+    }else{
+      let u;
+      if(m==='UCS'){
+        sortFrontier();const min=dist[f[0]];u=choose(f.filter(n=>dist[n]===min));f.splice(f.indexOf(u),1);
+      }else u=f.shift();
+      current=u;order.push(u);closed.add(u);
+      if(u===target){snapshot('GOAL · '+u,true,true,{action:'goal',removed:u,added:[],updates:[],before});return result(true)}
+
+      const added=[],updates=[];
+      if(m==='BFS'){
+        const fresh=g.adj[u].filter(n=>!seen.has(n));
+        const orderedFresh=choose([...perms(fresh)]);
+        for(const v of orderedFresh){seen.add(v);parent[v]=u;dist[v]=dist[u]+1;f.push(v);added.push(v)}
+      }else{
+        for(const v of g.adj[u]){
+          if(closed.has(v)){updates.push({node:v,type:'settled'});continue}
+          const edge=weight(u,v),candidate=dist[u]+edge,old=dist[v]??Infinity;
+          if(candidate<old){
+            dist[v]=candidate;parent[v]=u;
+            if(!seen.has(v)){seen.add(v);f.push(v);added.push(v)}
+            updates.push({node:v,from:dist[u],edge,old,value:candidate,type:old===Infinity?'new':'improve'});
+          }else updates.push({node:v,from:dist[u],edge,old,value:candidate,type:candidate===old?'tie':'keep'});
+        }
+        sortFrontier();
+      }
+      snapshot('EXPAND '+u,!f.length,false,{action:'expand',removed:u,added,updates,before});
+    }
+  }
+  return result(false);
+}
+function* enumerate(g,m,t,ds=[]){
+  try{
+    const r=run(g,m,t,ds,true);
+    const path=r.found?pathFrom(r.parent,t):[];
+    yield {decisions:ds,order:r.order,found:r.found,path};
+  }catch(e){
+    if(!e||!e.branch)throw e;
+    for(let i=0;i<e.branch;i++)yield* enumerate(g,m,t,[...ds,i]);
+  }
+}
+
+let mode='BFS',gi=0,target='G',possibilities=[],steps=[],index=-1,timer=null,playing=false,generation=0,busy=false,ucsCostAnimating=false,costSequenceToken=0,playSession=0;
+const UCS_COST_STAGE_MS=2000,UCS_COST_FADE_MS=300;
+function stop(){playing=false;playSession++;clearTimeout(timer);timer=null;$('autoBtn').textContent='Auto play'}
+function setMode(m){
+  cancelUcsCostSequence();stop();clearSearchAnimations();clearChipAnimations('dsItems');mode=m;generation++;
+  $('home').hidden=true;$('lesson').hidden=false;$('homeBtn').hidden=false;
+  document.querySelectorAll('[data-mode]').forEach(b=>{b.classList.toggle('active',b.dataset.mode===m);b.setAttribute('aria-pressed',String(b.dataset.mode===m))});
+  $('lessonTitle').textContent=title[m];$('memory').textContent=memory[m];$('theory').innerHTML=theory(m);$('simTitle').textContent=m+' · working example';
+  gi=m==='UCS'?12:0;target=graphs[gi].target;$('graphSelect').value=gi;setView(false);refresh();window.scrollTo(0,0);
+}
+function setView(sim){
+  cancelUcsCostSequence();stop();clearSearchAnimations();$('theory').hidden=sim;$('sim').hidden=!sim;$('theoryBtn').classList.toggle('active',!sim);$('workingBtn').classList.toggle('active',sim);
+  if(sim)requestAnimationFrame(()=>$('sim').scrollIntoView({block:'start'}));
+}
+
+async function refresh(){
+  cancelUcsCostSequence();stop();clearSearchAnimations();const ticket=++generation;busy=true;possibilities=[];steps=[];index=-1;
+  $('possibilitySelect').replaceChildren();$('nextBtn').disabled=true;$('autoBtn').disabled=true;$('resetBtn').disabled=true;$('count').textContent='Calculating every valid traversal…';
+  const g=graphs[gi];$('targetSelect').replaceChildren(...Object.keys(g.nodes).map(n=>new Option(n,n)));$('targetSelect').value=target;
+  draw();paint(null);clearCalculation();$('liveStatus').textContent='Calculating possibilities.';$('stepCounter').textContent='Preparing';setEmptyState();$('result').hidden=true;
+  $('structureTitle').textContent=mode==='BFS'?'Queue (FIFO)':mode==='DFS'?'Active call stack (LIFO)':'Priority queue · node : cost';
+  $('direction').textContent=mode==='BFS'?'FRONT: left · REAR: right':mode==='DFS'?'BOTTOM: left · TOP: right · push/pop at right':'Lowest g(n) first · highlighted item(s) share the minimum cost';
+  $('orderTitle').textContent=mode==='BFS'?'BFS expansion order':mode==='DFS'?'DFS visit order':'UCS settled order';
+  $('graphNote').textContent='Start: A · Target: '+target+' · Undirected graph. '+(mode==='UCS'?'Edge labels are positive costs.':'Every edge counts as one step; displayed edge weights are ignored.');
+  $('conventions').textContent=mode==='DFS'?'The visit order is not necessarily the solution path. The active stack is the current path; nodes stay visited after a pop.':mode==='BFS'?'Nodes are marked discovered on insertion. The goal is tested when removed from the front. All newly discovered neighbours from one expansion are enqueued together.':'The goal is tested only when removed with minimum cost. Every expansion shows new cost = g(u) + cost(u,v) for its eligible neighbours.';
+
+  try{
+    const unique=new Set();let batch=[];
+    for(const p of enumerate(g,mode,target)){
+      if(ticket!==generation)return;
+      const signature=p.order.join('|')+'||'+p.path.join('|')+'||'+p.found;
+      if(unique.has(signature))continue;
+      unique.add(signature);possibilities.push(p);
+      const suffix=p.found?'':' · unreachable';
+      batch.push(new Option('Possibility '+possibilities.length+' — '+p.order.join('→')+suffix,possibilities.length-1));
+      if(batch.length===100){$('possibilitySelect').append(...batch);batch=[];$('count').textContent='Calculating… '+possibilities.length+' unique traversals found.';await new Promise(r=>setTimeout(r,0))}
+    }
+    if(ticket!==generation)return;
+    $('possibilitySelect').append(...batch);busy=false;
+    $('count').textContent=possibilities.length+' valid '+(possibilities.length===1?'traversal':'traversals')+' · select one to replay.';
+    $('possibilitySelect').value='0';reset();
+  }catch(e){
+    if(ticket!==generation)return;busy=false;steps=[];buttons();$('count').textContent='Could not calculate this example. Select another graph.';console.error(e);
+  }
+}
+function setEmptyState(){$('chips').replaceChildren(Object.assign(document.createElement('span'),{className:'emptyLabel',textContent:'Empty'}));$('visited').replaceChildren(Object.assign(document.createElement('span'),{className:'emptyLabel',textContent:'Nothing yet'}));delete $('chips').dataset.signature;delete $('visited').dataset.signature}
+function reset(){
+  cancelUcsCostSequence();stop();if(busy)return;clearSearchAnimations();const p=possibilities[Number($('possibilitySelect').value)||0];steps=p?run(graphs[gi],mode,target,p.decisions).steps:[];index=-1;paint(null);clearCalculation();$('stepCounter').textContent='Ready';$('liveStatus').textContent='Ready. Press Next step.';setEmptyState();$('result').hidden=true;buttons();
+}
+function buttons(){$('nextBtn').disabled=busy||ucsCostAnimating||index>=steps.length-1;$('autoBtn').disabled=busy||index>=steps.length-1||(ucsCostAnimating&&!playing);$('resetBtn').disabled=busy}
+
+function svgEl(tag,attrs,text){const el=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,v);if(text!==undefined)el.textContent=text;return el}
+function graphCenter(g){const pts=Object.values(g.nodes),xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);return {x:(Math.min(...xs)+Math.max(...xs))/2,y:(Math.min(...ys)+Math.max(...ys))/2}}
+function weightPosition(g,a,b){
+  const [x1,y1]=g.nodes[a],[x2,y2]=g.nodes[b],mx=(x1+x2)/2,my=(y1+y2)/2,dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy)||1;
+  const px=-dy/len,py=dx/len,offset=30,c=graphCenter(g),p1={x:mx+px*offset,y:my+py*offset},p2={x:mx-px*offset,y:my-py*offset};
+  return ((p1.x-c.x)**2+(p1.y-c.y)**2)>=((p2.x-c.x)**2+(p2.y-c.y)**2)?p1:p2;
+}
+function draw(){
+  const svg=$('graph'),g=graphs[gi];svg.replaceChildren();
+  for(const [a,b,w] of g.edges){
+    const [x1,y1]=g.nodes[a],[x2,y2]=g.nodes[b];svg.append(svgEl('line',{x1,y1,x2,y2,class:'edge','data-edge':key(a,b)}));
+    if(mode==='UCS'){
+      const pos=weightPosition(g,a,b),textValue=String(w),boxW=Math.max(24,textValue.length*12+16),boxH=26;
+      const wrap=svgEl('g',{class:'weightWrap',transform:'translate('+pos.x+' '+pos.y+')'});
+      wrap.append(svgEl('rect',{x:-boxW/2,y:-boxH/2,width:boxW,height:boxH,rx:9,ry:9}),svgEl('text',{class:'weight',x:0,y:1},textValue));
+      svg.append(wrap);
+    }
+  }
+  for(const [n,[x,y]] of Object.entries(g.nodes)){
+    const el=svgEl('g',{class:'node','data-node':n,transform:'translate('+x+' '+y+')'});el.append(svgEl('circle',{r:34}),svgEl('text',{'text-anchor':'middle','dominant-baseline':'middle'},n));
+    if(mode==='UCS')el.append(svgEl('text',{y:56,'text-anchor':'middle',class:'costLabel'},'g=∞'));
+    el.setAttribute('role','button');el.setAttribute('tabindex','0');el.setAttribute('aria-label','Set target '+n);
+    const chooseTarget=()=>{if(n!==target){target=n;refresh()}};el.addEventListener('click',chooseTarget);el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();chooseTarget()}});svg.append(el);
+  }
+}
+function paint(s,costState=s){
+  $('graph').querySelectorAll('.flowDot').forEach(e=>{e.getAnimations?.().forEach(a=>a.cancel());e.remove()});
+  $('graph').querySelectorAll('.node').forEach(el=>{
+    const n=el.dataset.node,changed=s?.updates?.some(u=>u.node===n&&(u.type==='new'||u.type==='improve'));
+    el.setAttribute('class','node'+(s?.seen.includes(n)?' discovered':'')+(s?.order.includes(n)?' processed':'')+(s?.current===n?' current':'')+(n===target?' target':'')+(changed?' improved':''));
+    const label=el.querySelector('.costLabel');if(label){label.classList.remove('costFormula','costResult');label.textContent='g='+(costState?.dist?.[n]??'∞')+(s?.order.includes(n)?' ✓':'')}
+  });
+  const tree=new Set(Object.entries(s?.parent||{}).map(([n,p])=>key(n,p))),pathEdges=new Set();
+  if(s?.found){let n=target;const guard=new Set([n]);while(s.parent[n]&&!guard.has(s.parent[n])){pathEdges.add(key(n,s.parent[n]));n=s.parent[n];guard.add(n)}}
+  const active=new Set((s?.updates||[]).filter(u=>u.type==='new'||u.type==='improve').map(u=>key(s.current,u.node)));
+  (s?.added||[]).forEach(n=>{if(s.parent[n])active.add(key(s.parent[n],n))});
+  $('graph').querySelectorAll('.edge').forEach(el=>el.setAttribute('class','edge'+(tree.has(el.dataset.edge)?' tree':'')+(active.has(el.dataset.edge)?' relaxing':'')+(pathEdges.has(el.dataset.edge)?' path':'')));
+}
+const managedMotions=new WeakSet();
+function cancelManagedMotions(el,finish=false){
+  if(!el)return;
+  for(const a of el.getAnimations?.()||[]){
+    if(!managedMotions.has(a))continue;
+    if(finish){try{a.finish()}catch(_){}}
+    try{a.cancel()}catch(_){}
+  }
+}
+function motion(el,frames,options={duration:260,easing:'ease-out'}){
+  if(!el)return null;
+  // Cancel only JavaScript motion animations. CSS colour transitions are intentionally
+  // left alone so highlight changes blend smoothly instead of snapping.
+  cancelManagedMotions(el,false);
+  if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&el.animate){
+    const a=el.animate(frames,options);managedMotions.add(a);return a;
+  }
+  return null;
+}
+
+/* Queue/stack motion is operation-faithful and FLIP-based.
+   Queue: enqueue at REAR (right), dequeue at FRONT (left).
+   Stack: push and pop at TOP (right).
+   Existing items keep their visual position while the DOM updates, then slide to the new slot. */
+function chipGhosts(id){return [...document.querySelectorAll('.chipGhost[data-chip-owner="'+id+'"]')]}
+function settleLiveChipAnimations(box){
+  if(!box)return;
+  // Finish only FLIP/slide motion. Do not finish CSS colour transitions; allowing
+  // those transitions to continue prevents the amber/green/purple highlights snapping.
+  for(const el of box.querySelectorAll('.chip'))cancelManagedMotions(el,true);
+}
+function clearChipAnimations(id){
+  const box=$(id);if(!box)return;
+  settleLiveChipAnimations(box);
+  chipGhosts(id).forEach(e=>{e.getAnimations?.().forEach(a=>a.cancel());e.remove()});
+  delete box.dataset.signature;
+}
+function clearSearchAnimations(){clearChipAnimations('chips');clearChipAnimations('visited')}
+function chipKey(text){return String(text).split(':')[0]}
+function createExitGhost(id,source,rect){
+  // Use the ACTUAL chip that is leaving rather than a reconstructed clone.
+  // Freeze its computed appearance before moving it out of the flex container, so the
+  // text, padding, border and highlight remain pixel-consistent throughout the fade.
+  const cs=getComputedStyle(source);
+  const frozen={
+    fontFamily:cs.fontFamily,fontSize:cs.fontSize,fontWeight:cs.fontWeight,fontStyle:cs.fontStyle,
+    lineHeight:cs.lineHeight,letterSpacing:cs.letterSpacing,color:cs.color,
+    backgroundColor:cs.backgroundColor,borderTop:cs.borderTop,borderRight:cs.borderRight,
+    borderBottom:cs.borderBottom,borderLeft:cs.borderLeft,borderRadius:cs.borderRadius,
+    paddingTop:cs.paddingTop,paddingRight:cs.paddingRight,paddingBottom:cs.paddingBottom,paddingLeft:cs.paddingLeft,
+    textAlign:cs.textAlign,boxSizing:cs.boxSizing
+  };
+  const ghost=source;
+  Object.assign(ghost.style,frozen,{
+    display:'flex',alignItems:'center',justifyContent:'center',
+    left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px',
+    minWidth:rect.width+'px',maxWidth:rect.width+'px'
+  });
+  ghost.classList.add('chipGhost');
+  ghost.removeAttribute('data-key');
+  ghost.dataset.chipOwner=id;
+  ghost.setAttribute('aria-hidden','true');
+  document.body.append(ghost);
+  return ghost;
+}
+function renderChips(id,arr,kind='order'){
+  const box=$(id),signature=kind+'|'+JSON.stringify(arr);
+  if(box.dataset.signature===signature)return;
+
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Rapid clicks can arrive before the previous 300 ms animation finishes.
+  // Finish those transforms first so the next measurement always starts from a stable layout.
+  settleLiveChipAnimations(box);
+  chipGhosts(id).forEach(e=>{e.getAnimations?.().forEach(a=>a.cancel());e.remove()});
+
+  const oldEls=[...box.querySelectorAll('.chip')];
+  const oldByKey=new Map(oldEls.map(e=>[e.dataset.key,e]));
+  const oldRects=new Map(oldEls.map(e=>[e.dataset.key,e.getBoundingClientRect()]));
+  const oldTexts=new Map(oldEls.map(e=>[e.dataset.key,e.textContent]));
+  const newKeys=new Set(arr.map(chipKey));
+  const removed=oldEls.filter(e=>!newKeys.has(e.dataset.key)).map(e=>({el:e,rect:oldRects.get(e.dataset.key)}));
+
+  // Reuse retained DOM nodes. This eliminates the tiny flicker/jump caused by recreating
+  // every chip on every operation, especially during rapid queue dequeues.
+  const addedKeys=new Set();
+  const elements=arr.map(text=>{
+    const k=chipKey(text);
+    let e=oldByKey.get(k);
+    if(!e){e=document.createElement('span');addedKeys.add(k)}
+    // Preserve state/highlight classes on retained chips. Replacing className with
+    // 'chip' here used to temporarily remove .nextOut from the queue front on every
+    // enqueue. dsRender() then added .nextOut back a moment later, which made the
+    // unchanged first item flash/animate its colour even though it never changed role.
+    // Keeping semantic classes lets CSS transition only when the role really changes
+    // (for example, the stack top after a push/pop or a new priority minimum).
+    e.classList.remove('chipGhost');
+    e.classList.add('chip');
+    e.dataset.key=k;
+    e.textContent=text;
+    return e;
+  });
+
+  // Create exit copies before detaching the actual removed nodes. Position:fixed makes
+  // the leaving item begin at the exact pixel where it was drawn, independent of padding/wrapping.
+  const ghosts=!reduced&&kind!=='order'
+    ? removed.filter(x=>x.rect&&x.rect.width&&x.rect.height).map(x=>({ghost:createExitGhost(id,x.el,x.rect),rect:x.rect}))
+    : [];
+
+  if(elements.length)box.replaceChildren(...elements);
+  else{const empty=document.createElement('span');empty.className='emptyLabel';empty.textContent='Empty';box.replaceChildren(empty)}
+  box.dataset.signature=signature;
+
+  if(reduced)return;
+
+  // One shared timing curve is used for BOTH the outgoing chip and the chips that close
+  // the gap. This makes a dequeue read as one synchronized physical movement.
+  const timing={duration:340,easing:'cubic-bezier(.22,.75,.22,1)'};
+
+  // Measure retained-item movement first. For a queue dequeue, the leaving item travels
+  // approximately the same slot distance as the remaining items, at exactly the same
+  // duration and easing. No scale is used, so the letters never drift vertically.
+  const retainedMoves=[];
+  for(const e of elements){
+    const k=e.dataset.key,before=oldRects.get(k),after=e.getBoundingClientRect();
+    if(!addedKeys.has(k)&&before)retainedMoves.push({dx:before.left-after.left,dy:before.top-after.top});
+  }
+  const queueSlotShift=retainedMoves.find(m=>Math.abs(m.dx)>.25||Math.abs(m.dy)>.25);
+
+  // Leaving chip. Queue/priority leaves to the LEFT; stack TOP leaves to the RIGHT.
+  for(const {ghost,rect} of ghosts){
+    const fallback=Math.max(38,Math.min(64,rect.width*.9));
+    const distance=(kind==='queue'||kind==='priority')&&queueSlotShift?Math.max(1,Math.abs(queueSlotShift.dx)||fallback):fallback;
+    const dx=kind==='stack'?distance:-distance;
+    const anim=motion(ghost,
+      [{opacity:1,transform:'translate3d(0,0,0)'},{opacity:0,transform:`translate3d(${dx}px,0,0)`}],
+      {...timing,fill:'forwards'});
+    if(anim)anim.finished.then(()=>ghost.remove(),()=>ghost.remove());else ghost.remove();
+  }
+
+  // Retained items use FLIP: visually start in their old slot and glide to the new one.
+  // This is what makes B and C slide left smoothly when A is dequeued.
+  for(const e of elements){
+    const k=e.dataset.key,before=oldRects.get(k),after=e.getBoundingClientRect();
+    const changed=oldTexts.has(k)&&oldTexts.get(k)!==e.textContent;
+    if(addedKeys.has(k))continue;
+    if(!before)continue;
+    const dx=before.left-after.left,dy=before.top-after.top;
+    if(Math.abs(dx)>.25||Math.abs(dy)>.25||changed){
+      motion(e,
+        [{transform:`translate3d(${dx}px,${dy}px,0)`,opacity:1},{transform:'translate3d(0,0,0)',opacity:1}],
+        timing);
+    }
+  }
+
+  // New queue/stack items always arrive from the RIGHT: rear for a queue, top for a stack.
+  // All nodes added in one BFS expansion begin together, so the enqueue is visibly one operation.
+  for(const e of elements){
+    if(!addedKeys.has(e.dataset.key))continue;
+    const frames=kind==='order'
+      ? [{opacity:0,transform:'translateY(7px) scale(.96)'},{opacity:1,transform:'translateY(0) scale(1)'}]
+      : kind==='priority'
+        ? [{opacity:0,transform:'translateY(-8px) scale(.94)'},{opacity:1,transform:'translateY(0) scale(1)'}]
+        : [{opacity:0,transform:'translateX(42px) scale(.92)'},{opacity:1,transform:'translateX(0) scale(1)'}];
+    motion(e,frames,{duration:320,easing:'cubic-bezier(.16,.84,.28,1)'});
+  }
+}
+
+function animateExpansion(s){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const destinations=mode==='UCS'?(s.updates||[]).filter(u=>u.type==='new'||u.type==='improve').map(u=>u.node):(s.added||[]);
+  destinations.forEach(n=>{
+    const from=s.parent[n];if(!from)return;const [x,y]=graphs[gi].nodes[from],[tx,ty]=graphs[gi].nodes[n];
+    const dot=svgEl('circle',{r:7,fill:'#11976d',class:'flowDot','aria-hidden':'true'});dot.style.transform=`translate(${tx}px,${ty}px)`;$('graph').append(dot);
+    const animation=motion(dot,[{transform:`translate(${x}px,${y}px)`,opacity:.5},{transform:`translate(${tx}px,${ty}px)`,opacity:1}],{duration:420,easing:'ease-out'});if(animation)animation.finished.then(()=>dot.remove(),()=>dot.remove());else dot.remove();
+  });
+}
+function waitMs(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
+function nextFrame(){return new Promise(resolve=>requestAnimationFrame(()=>resolve()))}
+function cancelUcsCostSequence(){costSequenceToken++;ucsCostAnimating=false}
+function costLabelFor(node){return $('graph').querySelector('.node[data-node="'+CSS.escape(node)+'"] .costLabel')}
+async function transitionOpacity(el,value,token){
+  if(!el||token!==costSequenceToken)return false;
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){el.style.opacity=String(value);return token===costSequenceToken}
+  return await new Promise(resolve=>{
+    let done=false;
+    const finish=()=>{if(done)return;done=true;el.removeEventListener('transitionend',onEnd);resolve(token===costSequenceToken)};
+    const onEnd=e=>{if(e.target===el&&e.propertyName==='opacity')finish()};
+    el.addEventListener('transitionend',onEnd);
+    requestAnimationFrame(()=>{el.style.opacity=String(value)});
+    setTimeout(finish,UCS_COST_FADE_MS+80);
+  });
+}
+async function fadeCostText(label,text,kind,token){
+  if(!label||token!==costSequenceToken)return false;
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  label.classList.remove('costFormula','costResult');
+  if(reduced){label.textContent=text;if(kind)label.classList.add(kind);label.style.opacity='1';return token===costSequenceToken}
+  label.style.opacity='1';
+  if(!(await transitionOpacity(label,0,token)))return false;
+  if(token!==costSequenceToken)return false;
+  label.textContent=text;
+  if(kind)label.classList.add(kind);
+  void label.getBBox();
+  await nextFrame();
+  if(!(await transitionOpacity(label,1,token)))return false;
+  return token===costSequenceToken;
+}
+async function animateUcsCostUpdateLabels(s,token){
+  const changes=(s.updates||[]).filter(u=>u.type==='new'||u.type==='improve');
+  if(!changes.length)return true;
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){
+    for(const u of changes){const label=costLabelFor(u.node);if(label){label.textContent='g='+u.value;label.classList.add('costResult')}}
+    return token===costSequenceToken;
+  }
+  /* Stage 1: show the symbolic source of the calculation first. */
+  const symbolicShown=await Promise.all(changes.map(u=>fadeCostText(costLabelFor(u.node),'g('+s.current+') + cost('+s.current+','+u.node+')','costFormula',token)));
+  if(token!==costSequenceToken||symbolicShown.some(v=>!v))return false;
+  await waitMs(UCS_COST_STAGE_MS);
+  if(token!==costSequenceToken)return false;
+  /* Stage 2: replace it with the substituted numeric arithmetic. */
+  const numericShown=await Promise.all(changes.map(u=>fadeCostText(costLabelFor(u.node),u.from+' + '+u.edge+' = '+u.value,'costFormula',token)));
+  if(token!==costSequenceToken||numericShown.some(v=>!v))return false;
+  await waitMs(UCS_COST_STAGE_MS);
+  if(token!==costSequenceToken)return false;
+  /* Stage 3: store the final g-value at the same node position. */
+  const resultsShown=await Promise.all(changes.map(u=>fadeCostText(costLabelFor(u.node),'g='+u.value,'costResult',token)));
+  return token===costSequenceToken&&resultsShown.every(Boolean);
+}
+function fmtCost(v){return v===Infinity?'∞':String(v)}
+function clearCalculation(){$('calcPanel').hidden=true;$('calcRows').replaceChildren();$('calcContext').textContent=''}
+function renderCalculation(s){
+  if(mode!=='UCS'||s.action!=='expand'){clearCalculation();return}
+  const panel=$('calcPanel'),rows=$('calcRows');rows.replaceChildren();panel.hidden=false;$('calcContext').textContent='Current u = '+s.current+' · g('+s.current+') = '+s.dist[s.current];
+  for(const u of s.updates||[]){
+    const row=document.createElement('div');row.className='calcRow';
+    if(u.type==='settled'){
+      const f=document.createElement('div');f.className='calcFormula';f.textContent=s.current+' → '+u.node;const d=document.createElement('div');d.className='calcDecision skip';d.textContent=u.node+' is already settled, so it is skipped.';row.append(f,d);
+    }else{
+      const f=document.createElement('div');f.className='calcFormula';f.textContent='new cost = g('+s.current+') + cost('+s.current+','+u.node+') = '+u.from+' + '+u.edge+' = '+u.value;
+      const d=document.createElement('div');d.className='calcDecision';
+      if(u.type==='new'){d.classList.add('good');d.textContent='g('+u.node+') was ∞ → set g('+u.node+') = '+u.value+' and insert.'}
+      else if(u.type==='improve'){d.classList.add('good');d.textContent=u.value+' < '+fmtCost(u.old)+' → update g('+u.node+') from '+fmtCost(u.old)+' to '+u.value+'.'}
+      else if(u.type==='tie'){d.textContent=u.value+' = '+fmtCost(u.old)+' → keep the existing equal-cost entry and parent.'}
+      else d.textContent=u.value+' ≥ '+fmtCost(u.old)+' → no improvement; keep g('+u.node+') = '+fmtCost(u.old)+'.';
+      row.append(f,d);
+    }
+    rows.append(row);
+  }
+  if(!(s.updates||[]).length){const row=document.createElement('div');row.className='calcRow';row.textContent='No neighbours to evaluate.';rows.append(row)}
+  motion(panel,[{opacity:.55},{opacity:1}],{duration:240,easing:'ease-out'});
+}
+function stepAnnouncement(s){
+  if(mode==='DFS')return s.action==='push'?'Push '+s.added.join(', ')+' onto the top of the stack.':s.action==='pop'?'Pop '+s.removed+' from the top of the stack.':'Start with A.';
+  if(mode==='BFS')return s.action==='goal'?'Goal '+s.current+' removed from the front.':s.action==='start'?'Enqueue A.':'Expand '+s.current+'. '+(s.added.length?'Enqueue '+s.added.join(', ')+' together at the rear.':'No new nodes are enqueued.');
+  if(s.action==='goal')return 'Goal '+s.current+' removed with minimum cost '+s.dist[s.current]+'.';
+  if(s.action==='start')return 'Insert A with cost 0.';
+  return 'Expand '+s.current+' with g = '+s.dist[s.current]+'. Evaluate all eligible neighbour costs.';
+}
+async function next(){
+  if(busy||ucsCostAnimating||index+1>=steps.length)return false;
+  const previous=index>=0?steps[index]:null;
+  const s=steps[++index];
+  const stagedUcs=mode==='UCS'&&s.action==='expand'&&(s.updates||[]).some(u=>u.type==='new'||u.type==='improve');
+  const token=++costSequenceToken;
+  if(stagedUcs){ucsCostAnimating=true;buttons()}
+
+  /* During a UCS relaxation step, preserve each neighbour's OLD g-value first.
+     The staged animation then replaces it with the arithmetic and finally the new g-value. */
+  paint(s,stagedUcs?previous:s);
+  animateExpansion(s);renderCalculation(s);$('stepCounter').textContent=(index+1)+' / '+steps.length;$('liveStatus').textContent=stepAnnouncement(s);
+  const kind=mode==='DFS'?'stack':mode==='BFS'?'queue':'priority';renderChips('chips',s.f.map(n=>mode==='UCS'?n+':'+s.dist[n]:n),kind);renderChips('visited',s.order,'order');
+  if(mode==='UCS'&&s.f.length){const min=Math.min(...s.f.map(n=>s.dist[n]));[...$('chips').querySelectorAll('.chip')].forEach(e=>e.classList.toggle('minimum',s.dist[e.dataset.key]===min))}
+  $('result').hidden=!s.done;
+
+  if(stagedUcs){
+    const completed=await animateUcsCostUpdateLabels(s,token);
+    if(token!==costSequenceToken)return false;
+    ucsCostAnimating=false;
+    if(!completed){buttons();return false}
+  }
+
+  if(s.done){
+    stop();
+    if(s.found){
+      const path=pathFrom(s.parent,target);
+      $('result').textContent=(mode==='UCS'?'Lowest-cost path: ':'Path found: ')+path.join(' → ')+' · '+(mode==='UCS'?'Cost '+s.dist[target]:(path.length-1)+' edges');
+    }else $('result').textContent='No path found: A ↛ '+target+' · target is unreachable from A.';
+  }
+  buttons();
+  return true;
+}
+function delayMs(){let v=Number($('delay').value);if(!Number.isFinite(v)||$('delay').value==='')v=2;v=Math.max(.5,Math.min(10,v));$('delay').value=v;return v*1000}
+async function loop(session){if(!playing||session!==playSession)return;await next();if(!playing||session!==playSession)return;timer=setTimeout(()=>{void loop(session)},delayMs())}
+
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+$('homeBtn').onclick=()=>{cancelUcsCostSequence();stop();clearSearchAnimations();generation++;$('home').hidden=false;$('lesson').hidden=true;$('homeBtn').hidden=true;window.scrollTo(0,0)};
+$('theoryBtn').onclick=()=>setView(false);$('workingBtn').onclick=()=>setView(true);
+$('graphSelect').replaceChildren(...graphs.map((g,i)=>new Option((i+1)+'. '+g.name,i)));
+$('graphSelect').onchange=()=>{gi=Number($('graphSelect').value);target=graphs[gi].target;refresh()};
+$('targetSelect').onchange=()=>{target=$('targetSelect').value;refresh()};
+$('possibilitySelect').onchange=reset;
+$('nextBtn').onclick=()=>{stop();void next()};$('resetBtn').onclick=reset;
+$('autoBtn').onclick=()=>{if(playing){stop();return}if(busy||index>=steps.length-1)return;playing=true;const session=++playSession;$('autoBtn').textContent='Pause';void loop(session)};
+$('delay').onchange=()=>{delayMs();if(playing){clearTimeout(timer);const session=playSession;timer=setTimeout(()=>{void loop(session)},delayMs())}};
+document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelUcsCostSequence();stop();clearSearchAnimations();clearChipAnimations('dsItems')}});
+window.addEventListener('resize',()=>{clearSearchAnimations();clearChipAnimations('dsItems')});
+
+// Quick revision: fixed capacity is intentional so overflow can be demonstrated.
+let dsMode='stack',dsItems=[],dsSerial=0,dsStep=0,dsManual=false;
+const dsInfo={
+  stack:['Stack · LIFO','A stack removes the last item added. Think of a pile of plates: the top plate comes off first. DFS uses this rule.','BOTTOM: left · TOP: right · push and pop at TOP'],
+  queue:['Queue · FIFO','A queue removes the first item added. Think of students waiting at a counter: the first student is served first. BFS uses this rule.','FRONT: left (remove) · REAR: right (add)'],
+  priority:['Priority queue · minimum priority first','The item with the smallest priority number is removed first. UCS uses total path cost as priority. Here, ties are served in arrival order.','MINIMUM: left · smaller number leaves first · ties: earlier arrival first']
+};
+const dsScripts={
+  stack:[['add','A'],['add','B'],['add','C'],['peek'],['remove'],['add','D'],['remove'],['remove'],['remove'],['remove']],
+  queue:[['add','A'],['add','B'],['add','C'],['peek'],['remove'],['add','D'],['remove'],['remove'],['remove'],['remove']],
+  priority:[['add','A',5],['add','B',2],['add','C',4],['peek'],['remove'],['add','D',1],['add','E',4],['remove'],['remove'],['remove'],['remove'],['remove']]
+};
+const overflowExample=[['add','P',3],['add','Q',1],['add','R',4],['add','S',2],['add','T',1],['add','U',5],['add','V',0],['remove'],['add','V',0]];
+Object.values(dsScripts).forEach(script=>script.push(...overflowExample));
+function dsRender(message){
+  $('dsCapacity').textContent='Capacity: '+dsItems.length+' / 6 · '+(dsItems.length===6?'FULL':dsItems.length===0?'EMPTY':(6-dsItems.length)+' free slots');$('dsCapacity').style.color=dsItems.length===6?'#a34420':'#52627a';
+  renderChips('dsItems',dsItems.map(x=>x.name+(dsMode==='priority'?':'+x.priority:'')),dsMode==='stack'?'stack':dsMode==='queue'?'queue':'priority');
+  const next=dsMode==='stack'?dsItems.length-1:0;[...$('dsItems').querySelectorAll('.chip')].forEach((e,i)=>e.classList.toggle('nextOut',i===next));
+  $('dsStatus').textContent=message;motion($('dsStatus'),[{opacity:.45},{opacity:1}],{duration:220});$('dsProgress').textContent=dsManual?'Free practice':`Example step ${dsStep} of ${dsScripts[dsMode].length}`;$('dsExample').disabled=dsManual||dsStep>=dsScripts[dsMode].length;
+}
+function dsReset(){clearChipAnimations('dsItems');$('dsItems').replaceChildren();dsItems=[];dsSerial=0;dsStep=0;dsManual=false;$('dsValue').value='A';$('dsPriority').value='4';dsRender('Empty. Use Next example step for a guided demonstration, or try the operations yourself.')}
+function dsSet(m){
+  dsMode=m;document.querySelectorAll('[data-ds]').forEach(b=>{b.classList.toggle('active',b.dataset.ds===m);b.setAttribute('aria-pressed',String(b.dataset.ds===m))});
+  const info=dsInfo[m];$('dsTitle').textContent=info[0];$('dsIdea').textContent=info[1];$('dsDirection').textContent=info[2];$('priorityLabel').hidden=m!=='priority';$('dsAdd').textContent=m==='stack'?'Push':m==='queue'?'Enqueue':'Insert';$('dsRemove').textContent=m==='stack'?'Pop':m==='queue'?'Dequeue':'Remove minimum';
+  $('dsExampleHint').textContent=(m==='priority'?'Example: insert A:5, B:2 and C:4. Remove B first, then introduce D:1 and a priority tie. The amber item is next to leave.':'Example: add A, B and C, inspect the next item, remove it, then add D. The amber item is next to leave.')+' Then fill all six slots, try a seventh item (overflow), remove one item and insert again.';dsReset();
+}
+function dsAct(action,name,priority){
+  if(action==='add'){
+    const suppliedPriority=priority!==undefined;name=(name??$('dsValue').value).trim();priority=priority??Number($('dsPriority').value);
+    if(!/^[A-Za-z0-9 _-]{1,12}$/.test(name)){dsRender('Use 1–12 letters, numbers, spaces, hyphens or underscores for the item.');return}
+    if(dsItems.some(x=>x.name===name)){dsRender('Use a different item name so each item is easy to follow.');return}
+    if(dsItems.length>=6){dsRender('OVERFLOW · '+name+' rejected · 6 / 6 FULL · Existing items unchanged');return}
+    if(dsMode==='priority'&&(!Number.isInteger(priority)||priority<0||priority>99||(!suppliedPriority&&$('dsPriority').value===''))){dsRender('Enter a whole-number priority from 0 to 99.');return}
+    dsItems.push({name,priority,serial:dsSerial++});if(dsMode==='priority')dsItems.sort((a,b)=>a.priority-b.priority||a.serial-b.serial);
+    dsRender('IN → '+name+(dsMode==='priority'?' : '+priority+' · SORT ↑':dsMode==='stack'?' · TOP':' · REAR'));$('dsValue').value=String.fromCharCode(65+dsSerial%26);
+  }else if(!dsItems.length)dsRender(action==='peek'?'PEEK → ∅':'REMOVE → ∅ · Underflow');
+  else{
+    const i=dsMode==='stack'?dsItems.length-1:0,item=dsItems[i];
+    if(action==='peek'){dsRender('PEEK → '+item.name+' · No removal');motion($('dsItems').querySelectorAll('.chip')[i],[{transform:'scale(1)'},{transform:'scale(1.08)'},{transform:'scale(1)'}],{duration:300})}
+    else{dsItems.splice(i,1);dsRender('OUT ← '+item.name+(dsMode==='priority'?' : '+item.priority+' · MIN':dsMode==='stack'?' · TOP / LIFO':' · FRONT / FIFO'))}
+  }
+}
+document.querySelectorAll('[data-ds]').forEach(b=>b.onclick=()=>dsSet(b.dataset.ds));
+function randomPriorityExcept(previous){
+  const prev=Number(previous);
+  let next;
+  do next=Math.floor(Math.random()*100); while(next===prev);
+  return next;
+}
+function dsManualAct(action){
+  const before=JSON.stringify(dsItems),previousPriority=$('dsPriority').value;
+  dsAct(action);
+  if(before!==JSON.stringify(dsItems)){
+    if(action==='add'&&dsMode==='priority')$('dsPriority').value=String(randomPriorityExcept(previousPriority));
+    dsManual=true;$('dsProgress').textContent='Free practice';$('dsExample').disabled=true;
+  }
+}
+$('dsAdd').onclick=()=>dsManualAct('add');$('dsRemove').onclick=()=>dsManualAct('remove');$('dsPeek').onclick=()=>dsAct('peek');$('dsReset').onclick=dsReset;$('dsRestart').onclick=dsReset;
+$('dsExample').onclick=()=>{if(dsManual||dsStep>=dsScripts[dsMode].length)return;const [a,n,p]=dsScripts[dsMode][dsStep++];dsAct(a,n,p)};
+$('dsValue').addEventListener('keydown',e=>{if(e.key==='Enter')$('dsAdd').click()});
+dsSet('stack');
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(b&&!b.disabled)motion(b,[{transform:'scale(.97)'},{transform:'scale(1)'}],{duration:160,easing:'ease-out'})});
+</script>
+</body>
+</html>
